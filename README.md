@@ -68,6 +68,44 @@ Do not reuse a version tag. Create a new tag for every published version, such a
 
 The package will appear under the repository's GitHub **Packages** tab. The release workflow uses the built-in `GITHUB_TOKEN` and requires package-writing permission, which is configured in `.github/workflows/ci.yml`.
 
+## Use JitPack
+
+JitPack builds this repository directly from Git tags. It does not require a PAT on robot computers.
+
+Push the repository and a version tag:
+
+```bash
+git add .
+git commit -m "Prepare JitPack publishing"
+git push origin main
+git tag v0.0.1
+git push origin v0.0.1
+```
+
+Check the build at:
+
+```text
+https://jitpack.io/#FRC-7525/PioneersLib-2
+```
+
+In a robot project, add JitPack before the WPILib repositories:
+
+```groovy
+repositories {
+    maven { url = uri("https://jitpack.io") }
+}
+```
+
+Then use the GitHub organization, repository, and tag as the dependency:
+
+```groovy
+dependencies {
+    implementation "com.github.FRC-7525:PioneersLib-2:v0.0.1"
+}
+```
+
+The GitHub organization may contain a hyphen in Maven/JitPack coordinates. Java package names may not; Java imports from this library remain under `org.team7525.*`.
+
 ## Add It To A Robot Project
 
 ### Option 1: Local Development

@@ -8,6 +8,7 @@ plugins {
 
 group = providers.gradleProperty("mavenGroup").getOrElse("org.team7525")
 version = providers.gradleProperty("mavenVersion").getOrElse("0.1.0-SNAPSHOT")
+def jitpackBuild = providers.gradleProperty("jitpack").isPresent()
 
 java {
     sourceCompatibility = JavaVersion.VERSION_25
@@ -18,6 +19,7 @@ def ROBOT_MAIN_CLASS = "first.Main"
 
 // Define my targets (SystemCore) and artifacts (deployable files)
 // This is added by GradleRIO's backing project DeployUtils.
+if (!jitpackBuild) {
 deploy {
     targets {
         systemcore(getTargetTypeClass('SystemCore')) {
@@ -51,8 +53,10 @@ deploy {
         }
     }
 }
-
-def deployArtifact = deploy.targets.systemcore.artifacts.wpilibJava
+    def deployArtifact = deploy.targets.systemcore.artifacts.wpilibJava
+    deployArtifact.configureApplication(application)
+    wpi.java.configureApplication(application)
+}
 
 // Set to true to use debug for simulation including JNI
 wpi.java.runSimWithDebugJni = false
@@ -67,12 +71,14 @@ dependencies {
     api wpi.java.deps.wpilib()
     api wpi.java.vendor.java()
 
-    systemcoreDebug wpi.java.deps.wpilibJniDebug(wpi.platforms.systemcore)
-    systemcoreDebug wpi.java.vendor.jniDebug(wpi.platforms.systemcore)
+    if (!jitpackBuild) {
+        systemcoreDebug wpi.java.deps.wpilibJniDebug(wpi.platforms.systemcore)
+        systemcoreDebug wpi.java.vendor.jniDebug(wpi.platforms.systemcore)
 
-    systemcoreRelease wpi.java.deps.wpilibJniRelease(wpi.platforms.systemcore)
-    systemcoreRelease wpi.java.vendor.jniRelease(wpi.platforms.systemcore)
+        systemcoreRelease wpi.java.deps.wpilibJniRelease(wpi.platforms.systemcore)
+        systemcoreRelease wpi.java.vendor.jniRelease(wpi.platforms.systemcore)
 
+    }
     nativeDebug wpi.java.deps.wpilibJniDebug(wpi.platforms.desktop)
     nativeDebug wpi.java.vendor.jniDebug(wpi.platforms.desktop)
     simulationDebug wpi.sim.enableDebug()
@@ -106,8 +112,6 @@ wpi.sim.addDriverstation()
 
 application.mainClass = ROBOT_MAIN_CLASS
 
-deployArtifact.configureApplication(application)
-wpi.java.configureApplication(application)
 wpi.java.configureTestTasks(test)
 
 jar {

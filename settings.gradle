@@ -29,6 +29,14 @@ pluginManagement {
             name = 'wpilibHome'
             url = wpilibHomeMaven
         }
+        maven {
+            name = 'wpilibPublic'
+            url = uri('https://frcmaven.wpi.edu/artifactory/development/')
+        }
+        maven {
+            name = 'wpilibPublicRelease'
+            url = uri('https://frcmaven.wpi.edu/artifactory/release/')
+        }
         mavenLocal()
         gradlePluginPortal()
     }
