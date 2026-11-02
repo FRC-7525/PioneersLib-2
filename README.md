@@ -128,7 +128,7 @@ In the robot project's `build.gradle`, add:
 
 ```groovy
 dependencies {
-    implementation "org.team7525:PioneersLib-2:0.1.0-SNAPSHOT"
+    implementation "org.team7525:pioneerslib-2:0.1.0-SNAPSHOT"
 }
 ```
 
@@ -184,7 +184,7 @@ Then add the released version to the robot project's `build.gradle`:
 
 ```groovy
 dependencies {
-    implementation "org.team7525:PioneersLib-2:0.1.0"
+    implementation "org.team7525:pioneerslib-2:0.1.0"
 }
 ```
 
@@ -216,6 +216,6 @@ Then open a pull request against `main`. GitHub Actions must pass before merging
 
 - `src/test/java` contains JUnit 5 tests.
 - Spotless uses Google Java Format.
-- Maven coordinates are `org.team7525:PioneersLib-2:<version>`.
+- Maven coordinates are `org.team7525:pioneerslib-2:<version>`.
 - Published artifacts include the main JAR, sources JAR, and Javadocs JAR.
 - The repository currently targets WPILib 2027 Alpha 7 and Java 25.
