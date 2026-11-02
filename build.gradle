@@ -1,0 +1,185 @@
+plugins {
+    id "java-library"
+    id "application"
+    id "maven-publish"
+    id "com.diffplug.spotless" version "7.0.2"
+    id "org.wpilib.GradleRIO" version "2027.0.0-alpha-7"
+}
+
+group = providers.gradleProperty("mavenGroup").getOrElse("org.team7525")
+version = providers.gradleProperty("mavenVersion").getOrElse("0.1.0-SNAPSHOT")
+def jitpackBuild = providers.gradleProperty("jitpack").isPresent()
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
+}
+
+def ROBOT_MAIN_CLASS = "first.Main"
+
+// Define my targets (SystemCore) and artifacts (deployable files)
+// This is added by GradleRIO's backing project DeployUtils.
+if (!jitpackBuild) {
+deploy {
+    targets {
+        systemcore(getTargetTypeClass('SystemCore')) {
+            // Team number is loaded either from the .wpilib/wpilib_preferences.json
+            // or from command line. If not found an exception will be thrown.
+            // You can use getTeamOrDefault(team) instead of getTeamNumber if you
+            // want to store a team number in this file.
+            team = project.wpilib.getTeamNumber()
+            // Use the default systemcore host name. This must be called after setting team
+            // as happens on the line above
+            useDefaultSystemcoreHostName()
+            debug = project.wpilib.getDebugOrDefault(false)
+
+            artifacts {
+                // First part is artifact name, 2nd is artifact type
+                // getTargetTypeClass is a shortcut to get the class type using a string
+
+                wpilibJava(getArtifactTypeClass('WPILibJavaArtifact')) {
+                    // Set to true to use debug including JNI, which will drastically impact performance.
+                    debugJni = false
+                }
+
+                // Static files artifact
+                wpilibStaticFileDeploy(getArtifactTypeClass('FileTreeArtifact')) {
+                    files = project.fileTree('src/main/deploy')
+                    directory = '/home/systemcore/deploy'
+                    deleteOldFiles = false // Change to true to delete files on systemcore that no
+                                           // longer exist in deploy directory of this project
+                }
+            }
+        }
+    }
+}
+    def deployArtifact = deploy.targets.systemcore.artifacts.wpilibJava
+    deployArtifact.configureApplication(application)
+    wpi.java.configureApplication(application)
+}
+
+// Set to true to use debug for simulation including JNI
+wpi.java.runSimWithDebugJni = false
+
+// Set this to true to enable desktop support.
+def includeDesktopSupport = true
+
+// Defining my dependencies. In this case, WPILib (+ friends), and vendor libraries.
+// Also defines JUnit 5.
+dependencies {
+    annotationProcessor wpi.java.deps.wpilibAnnotations()
+    api wpi.java.deps.wpilib()
+    api wpi.java.vendor.java()
+
+    if (!jitpackBuild) {
+        systemcoreDebug wpi.java.deps.wpilibJniDebug(wpi.platforms.systemcore)
+        systemcoreDebug wpi.java.vendor.jniDebug(wpi.platforms.systemcore)
+
+        systemcoreRelease wpi.java.deps.wpilibJniRelease(wpi.platforms.systemcore)
+        systemcoreRelease wpi.java.vendor.jniRelease(wpi.platforms.systemcore)
+
+    }
+    nativeDebug wpi.java.deps.wpilibJniDebug(wpi.platforms.desktop)
+    nativeDebug wpi.java.vendor.jniDebug(wpi.platforms.desktop)
+    simulationDebug wpi.sim.enableDebug()
+
+    nativeRelease wpi.java.deps.wpilibJniRelease(wpi.platforms.desktop)
+    nativeRelease wpi.java.vendor.jniRelease(wpi.platforms.desktop)
+    simulationRelease wpi.sim.enableRelease()
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.1'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    api 'org.joml:joml:1.10.5'
+    api 'com.fasterxml.jackson.core:jackson-annotations:2.18.1'
+    compileOnly 'org.projectlombok:lombok:1.18.48'
+    annotationProcessor 'org.projectlombok:lombok:1.18.48'
+    
+    testCompileOnly 'org.projectlombok:lombok:1.18.48'
+    testAnnotationProcessor 'org.projectlombok:lombok:1.18.48'
+    def akitJson = new groovy.json.JsonSlurper().parseText(new File(projectDir.getAbsolutePath() + "/vendordeps/AdvantageKit.json").text)
+    annotationProcessor "org.littletonrobotics.akit:akit-autolog:$akitJson.version"
+}
+
+test {
+    useJUnitPlatform()
+    systemProperty 'junit.jupiter.extensions.autodetection.enabled', 'true'
+}
+
+// Simulation configuration (e.g. environment variables).
+wpi.sim.addGui().defaultEnabled = true
+wpi.sim.addDriverstation()
+
+application.mainClass = ROBOT_MAIN_CLASS
+
+wpi.java.configureTestTasks(test)
+
+jar {
+    from('src') { into 'backup/src' }
+    from('vendordeps') { into 'backup/vendordeps' }
+    from('build.gradle') { into 'backup' }
+}
+
+java {
+    withSourcesJar()
+    withJavadocJar()
+}
+
+javadoc {
+    failOnError = false
+    exclude("org/team7525/offlineTrajectoryService/request/**")
+    options.addStringOption("Xdoclint:none", "-quiet")
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+            pom {
+                name = "PioneersLib"
+                description = "Reusable WPILib utilities and simulation helpers for FRC teams"
+                url = "https://github.com/FRC-7525/PioneersLib-2"
+                licenses {
+                    license {
+                        name = "WPILib License"
+                        url = "https://github.com/wpilibsuite/allwpilib/blob/main/LICENSE.md"
+                    }
+                }
+                developers {
+                    developer {
+                        id = "team7525"
+                        name = "Team 7525"
+                    }
+                }
+                scm {
+                    connection = "scm:git:git://github.com/FRC-7525/PioneersLib-2.git"
+                    developerConnection = "scm:git:ssh://github.com/FRC-7525/PioneersLib-2.git"
+                    url = "https://github.com/FRC-7525/PioneersLib-2"
+                }
+            }
+        }
+    }
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/FRC-7525/PioneersLib-2")
+            credentials {
+                username = providers.environmentVariable("GITHUB_ACTOR").orNull
+                password = providers.environmentVariable("GITHUB_TOKEN").orNull
+            }
+        }
+    }
+}
+
+spotless {
+    java {
+        googleJavaFormat("1.28.0").aosp()
+        target("src/**/*.java")
+        targetExclude("build/**")
+    }
+}
+
+// Configure string concat to always inline compile
+tasks.withType(JavaCompile) {
+    options.compilerArgs.add '-XDstringConcat=inline'
+}
