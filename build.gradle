@@ -135,6 +135,7 @@ publishing {
     publications {
         mavenJava(MavenPublication) {
             from components.java
+            artifactId = project.name.toLowerCase()
             pom {
                 name = "PioneersLib"
                 description = "Reusable WPILib utilities and simulation helpers for FRC teams"
