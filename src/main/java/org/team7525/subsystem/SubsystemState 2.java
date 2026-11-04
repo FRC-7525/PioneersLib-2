@@ -3,13 +3,12 @@ package org.team7525.subsystem;
 import static org.wpilib.units.Units.*;
 
 import org.wpilib.math.geometry.Pose2d;
-import org.wpilib.units.measure.Voltage;
-
 import org.wpilib.units.measure.Angle;
 import org.wpilib.units.measure.AngularVelocity;
 import org.wpilib.units.measure.Distance;
 import org.wpilib.units.measure.LinearAcceleration;
 import org.wpilib.units.measure.LinearVelocity;
+import org.wpilib.units.measure.Voltage;
 
 /**
  * A container for the state of a subsystem, prevents invalid states with eroneous vaues. If your
@@ -24,8 +23,7 @@ public record SubsystemState(
         AngularVelocity secondaryAngularVelocity,
         LinearAcceleration linearAcceleration,
         Voltage primaryVoltage,
-        Pose2d pose2d
-    ) {
+        Pose2d pose2d) {
     private static final Distance ZERO_POSITION = Meters.of(0);
     private static final Angle ZERO_ANGULAR_POSITION = Radians.of(0);
     private static final LinearVelocity ZERO_VELOCITY = MetersPerSecond.of(0);
@@ -53,8 +51,7 @@ public record SubsystemState(
     }
 
     /** Static factory method for defining a subsystem with just elevator states */
-    public static SubsystemState fromElevatorStates(
-            Distance position, LinearVelocity velocity) {
+    public static SubsystemState fromElevatorStates(Distance position, LinearVelocity velocity) {
         return new SubsystemState(
                 position,
                 ZERO_ANGULAR_POSITION,
@@ -81,8 +78,7 @@ public record SubsystemState(
     }
 
     /** Static factory method for defining a subsystem with just intake states */
-    public static SubsystemState fromIntakeStates(
-            AngularVelocity angularVelocity) {
+    public static SubsystemState fromIntakeStates(AngularVelocity angularVelocity) {
         return new SubsystemState(
                 ZERO_POSITION,
                 ZERO_ANGULAR_POSITION,
@@ -94,8 +90,7 @@ public record SubsystemState(
                 ZERO_POSE2D);
     }
 
-    public static SubsystemState fromIntakeStates(
-            Voltage voltage) {
+    public static SubsystemState fromIntakeStates(Voltage voltage) {
         return new SubsystemState(
                 ZERO_POSITION,
                 ZERO_ANGULAR_POSITION,
@@ -138,7 +133,8 @@ public record SubsystemState(
     }
 
     /** Static factory method for defining a subsystem with spinner and pivot states */
-    public static SubsystemState fromPivotWithSpinnerStates(Angle angularPosition, AngularVelocity angularVelocity) {
+    public static SubsystemState fromPivotWithSpinnerStates(
+            Angle angularPosition, AngularVelocity angularVelocity) {
         return new SubsystemState(
                 ZERO_POSITION,
                 angularPosition,
@@ -153,7 +149,8 @@ public record SubsystemState(
     /**
      * Static factory method for defining a subsystem with just turret states (mech pls build this)
      */
-    public static SubsystemState fromTurretStates(Angle angularPosition, AngularVelocity angularVelocity) {
+    public static SubsystemState fromTurretStates(
+            Angle angularPosition, AngularVelocity angularVelocity) {
         return new SubsystemState(
                 ZERO_POSITION,
                 angularPosition,
@@ -170,15 +167,18 @@ public record SubsystemState(
         double pos = linearPosition != null ? linearPosition.in(Meters) : 0;
         double vel = linearVelocity != null ? linearVelocity.in(MetersPerSecond) : 0;
         double angVel = angularVelocity != null ? angularVelocity.in(RotationsPerSecond) : 0;
-        double secVel = secondaryAngularVelocity != null ? secondaryAngularVelocity.in(RPM) / 60 : 0;
-        double accel = linearAcceleration != null ? linearAcceleration.in(MetersPerSecondPerSecond) : 0;
+        double secVel =
+                secondaryAngularVelocity != null ? secondaryAngularVelocity.in(RPM) / 60 : 0;
+        double accel =
+                linearAcceleration != null ? linearAcceleration.in(MetersPerSecondPerSecond) : 0;
         double voltageVal = primaryVoltage != null ? primaryVoltage.in(Volts) : 0;
         double poseX = pose2d != null ? pose2d.getX() : 0;
         double poseY = pose2d != null ? pose2d.getY() : 0;
 
         if (pos > 10) {
             throw new IllegalStateException(
-                    "Position must be less than or equal to 10. There is likely a unit conversion error.");
+                    "Position must be less than or equal to 10. There is likely a unit conversion"
+                            + " error.");
         }
 
         if (vel > 40) {
@@ -188,7 +188,8 @@ public record SubsystemState(
 
         if (angVel > 200 || secVel > 200) {
             throw new IllegalStateException(
-                    "Improbable that a motor is going 200RPS - Either the gearing is too low or the code is bad.");
+                    "Improbable that a motor is going 200RPS - Either the gearing is too low or the"
+                            + " code is bad.");
         }
 
         if (accel > 30) {
