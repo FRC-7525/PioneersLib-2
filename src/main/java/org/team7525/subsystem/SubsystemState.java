@@ -77,6 +77,19 @@ public record SubsystemState(
                 ZERO_POSE2D);
     }
 
+    public static SubsystemState fromPivotingIntakeStates(Angle angularPosition, Voltage voltage) {
+        return new SubsystemState(
+                ZERO_POSITION,
+                angularPosition,
+                ZERO_VELOCITY,
+                ZERO_ANGULAR_VELOCITY,
+                ZERO_ANGULAR_VELOCITY,
+                ZERO_ACCELERATION,
+                voltage,
+                ZERO_POSE2D);
+    }
+
+
     /** Static factory method for defining a subsystem with just intake states */
     public static SubsystemState fromIntakeStates(AngularVelocity angularVelocity) {
         return new SubsystemState(
