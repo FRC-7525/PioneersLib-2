@@ -31,10 +31,11 @@ public abstract class ManagedSubsystem<StateType extends Enum<StateType> & Subsy
 
         state.getState().run(this);
     }
-    
+
     public void afterPeriodic() {
         // Custom logic to be executed after the periodic method
     }
+
     /** Fallback hook for states whose behavior depends on the subsystem instance. */
     protected void runState() {}
 
