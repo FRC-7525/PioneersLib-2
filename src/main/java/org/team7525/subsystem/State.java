@@ -29,6 +29,18 @@ public class State {
         this(stateString, runnable, subsystemState, null);
     }
 
+    public State(String stateString, SubsystemState subsystemState) {
+        this(stateString, null, subsystemState, null);
+    }
+
+    public State(String stateString, Runnable runnable, Map<String, Object> customFields) {
+        this(stateString, runnable, null, customFields);
+    }
+
+    public State(String stateString, Map<String, Object> customFields) {
+        this(stateString, null, null, customFields);
+    }
+
     public State(String stateString, Runnable runnable) {
         this(stateString, runnable, null, null);
     }
