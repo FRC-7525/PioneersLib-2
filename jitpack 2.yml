@@ -1,6 +1,0 @@
-jdk:
-  - openjdk25
-
-install: ./gradlew clean publishToMavenLocal -Pjitpack -PmavenVersion=$VERSION
-
-build: ./gradlew clean build -Pjitpack -PmavenVersion=$VERSION

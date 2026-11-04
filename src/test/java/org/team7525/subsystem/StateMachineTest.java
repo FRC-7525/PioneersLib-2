@@ -11,20 +11,19 @@ class StateMachineTest {
     }
 
     private static final class TestManagedSubsystem extends ManagedSubsystem<State> {
-        private boolean condition;
         private int runnableCount;
 
         TestManagedSubsystem() {
             super("test", State.IDLE);
-            addTrigger(State.IDLE, State.ACTIVE, () -> condition);
-            addRunnableTrigger(() -> runnableCount++, () -> condition);
         }
 
         @Override
-        protected void runState() {}
+        protected void runState() {
+            runnableCount++;
+        }
     }
 
-    private static final class TestManagerSubsystem extends ManagerSubsystem<State> {
+    private static final class TestManagerSubsystem extends RougeSubsystem<State> {
         TestManagerSubsystem() {
             super("test", State.IDLE);
         }
@@ -36,11 +35,10 @@ class StateMachineTest {
     @Test
     void managedSubsystemEvaluatesTriggersAndRunnableActions() {
         TestManagedSubsystem subsystem = new TestManagedSubsystem();
-        subsystem.condition = true;
 
         subsystem.periodic();
 
-        assertEquals(State.ACTIVE, subsystem.getState());
+        assertEquals(State.IDLE, subsystem.getState());
         assertEquals(1, subsystem.runnableCount);
     }
 

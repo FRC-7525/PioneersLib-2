@@ -2,7 +2,7 @@ package org.team7525.subsystem;
 
 import java.util.function.BooleanSupplier;
 
-public class Trigger<StateType extends SubsystemStates> {
+public class Trigger<StateType extends Enum<StateType> & SubsystemStates> {
     BooleanSupplier supplier;
     StateType state;
 

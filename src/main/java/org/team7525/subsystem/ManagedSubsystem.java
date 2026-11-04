@@ -1,21 +1,14 @@
 package org.team7525.subsystem;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.function.BooleanSupplier;
+import org.littletonrobotics.junction.Logger;
 import org.wpilib.command3.Command;
 import org.wpilib.command3.Mechanism;
 import org.wpilib.hardware.hal.SimDevice.Direction;
 import org.wpilib.system.Timer;
 
-public abstract class ManagedSubsystem<StateType extends SubsystemStates> implements Mechanism {
-
-    private Map<StateType, ArrayList<Trigger<StateType>>> triggerMap = new HashMap<>();
-    private List<RunnableTrigger> runnableTriggerList = new ArrayList<>();
-
-    private StateType state = null;
+public abstract class ManagedSubsystem<StateType extends Enum<StateType> & SubsystemStates>
+        implements Mechanism {
+    protected StateType state = null;
     private Timer stateTimer = new Timer();
     private String subsystemName;
 
@@ -33,17 +26,17 @@ public abstract class ManagedSubsystem<StateType extends SubsystemStates> implem
 
     // State operation
     public void periodic() {
-        // Commented out bc bad code
-        // Logger.recordOutput(subsystemName + "/state", state.getStateString());
-        // if (!DriverStation.isEnabled()) return;
+        Logger.recordOutput(
+                subsystemName + "/state", state.getStateString()); // TODO: Maybe problematic
 
-        runState();
-
-        checkTriggers();
-        checkRunnableTriggers();
+        state.getState().run(this);
     }
-
-    protected abstract void runState();
+    
+    public void afterPeriodic() {
+        // Custom logic to be executed after the periodic method
+    }
+    /** Fallback hook for states whose behavior depends on the subsystem instance. */
+    protected void runState() {}
 
     /** Called AFTER the subsystem is set to a new state. Override to implement functionality */
     protected void stateInit() {}
@@ -52,43 +45,6 @@ public abstract class ManagedSubsystem<StateType extends SubsystemStates> implem
     /** Called BEFORE the subsystem is set to a new state. Override to implement functionality */
     protected void stateExit() {}
     ;
-
-    /**
-     * Triggers for state transitions
-     *
-     * @param startType The {@link StateType} for starting
-     * @param endType The {@link StateType} for ending
-     * @param condition A {@link BooleanSupplier} that triggers the state transition
-     */
-    protected void addTrigger(StateType startType, StateType endType, BooleanSupplier condition) {
-        triggerMap
-                .computeIfAbsent(startType, k -> new ArrayList<>())
-                .add(new Trigger<>(condition, endType));
-    }
-
-    protected void addRunnableTrigger(Runnable runnable, BooleanSupplier check) {
-        runnableTriggerList.add(new RunnableTrigger(check, runnable));
-    }
-
-    private void checkTriggers() {
-        List<Trigger<StateType>> triggers = triggerMap.get(state);
-        if (triggers == null) return;
-
-        for (var trigger : triggers) {
-            if (trigger.isTriggered()) {
-                setState(trigger.getResultState());
-                return;
-            }
-        }
-    }
-
-    private void checkRunnableTriggers() {
-        for (var trigger : runnableTriggerList) {
-            if (trigger.isTriggered()) {
-                trigger.run();
-            }
-        }
-    }
 
     // Other utilities
     public StateType getState() {
@@ -103,11 +59,6 @@ public abstract class ManagedSubsystem<StateType extends SubsystemStates> implem
 
         this.state = state;
         stateInit();
-        List<Trigger<StateType>> triggers = triggerMap.get(state);
-        if (triggers != null) {
-            triggers.forEach(Trigger::resetState);
-        }
-        runnableTriggerList.forEach(RunnableTrigger::resetState);
     }
 
     public String getSubsystemName() {

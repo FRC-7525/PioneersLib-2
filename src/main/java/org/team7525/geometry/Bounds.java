@@ -35,4 +35,8 @@ public record Bounds(double minX, double maxX, double minY, double maxY) {
             new Translation2d(minX(), minY())
         };
     }
+
+    public boolean contains(double x, double y) {
+        return x >= minX() && x <= maxX() && y >= minY() && y <= maxY();
+    }
 }
