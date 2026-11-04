@@ -89,7 +89,6 @@ public record SubsystemState(
                 ZERO_POSE2D);
     }
 
-
     /** Static factory method for defining a subsystem with just intake states */
     public static SubsystemState fromIntakeStates(AngularVelocity angularVelocity) {
         return new SubsystemState(
