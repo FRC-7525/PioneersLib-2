@@ -24,17 +24,12 @@ public interface RollerSystemIO {
         public boolean followerConnected;
         public double followerSupplyCurrentAmps;
         public double followerTempCelsius;
-    }
-
-    public enum RollerSystemIOMode {
-        BRAKE,
-        COAST,
-        VOLTAGE_CONTROL,
-        CLOSED_LOOP
+        public double followerAppliedVoltage;
+        public double followerTorqueCurrentAmps;
     }
 
     public static class RollerSystemIOOutputs {
-        public RollerSystemIOMode mode = RollerSystemIOMode.BRAKE;
+        public RollerSystemStates state = RollerSystemStates.BRAKE;
         // Voltage control
         public double appliedVoltage = 0.0;
 

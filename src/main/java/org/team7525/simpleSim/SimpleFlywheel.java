@@ -7,6 +7,8 @@ import static org.wpilib.units.Units.Volts;
 
 import com.ctre.phoenix6.sim.TalonFXSimState;
 import com.revrobotics.sim.SparkMaxSim;
+import org.littletonrobotics.junction.mechanism.LoggedMechanism2d;
+import org.littletonrobotics.junction.mechanism.LoggedMechanismLigament2d;
 import org.team7525.util.GearRatio;
 import org.wpilib.math.geometry.Pose3d;
 import org.wpilib.math.geometry.Rotation3d;
@@ -32,6 +34,9 @@ public class SimpleFlywheel {
     private Pose3d pose3d;
     private double simulatedPositionRads = 0.0;
 
+    private final LoggedMechanism2d mech2d;
+    private final LoggedMechanismLigament2d flywheelLigament;
+
     /**
      * Constructs a new SimpleFlywheel physics simulation using a custom LinearSystem plant. Ideal
      * for using characterized System Identification (SysId) data.
@@ -50,6 +55,10 @@ public class SimpleFlywheel {
         this.axisOfRotation = axisOfRotation;
 
         flywheelSim = new FlywheelSim(plant, gearbox, gearRatio.getReduction(), 0.1);
+
+        mech2d = new LoggedMechanism2d(1.0, 1.0);
+        var root = mech2d.getRoot("FlywheelRoot", 0.5, 0.5);
+        flywheelLigament = root.append(new LoggedMechanismLigament2d("Flywheel", 0.25, 0.0));
 
         updatePose();
     }
@@ -73,6 +82,7 @@ public class SimpleFlywheel {
 
     /** Internal method to calculate the 3D pose of the spinning wheel. */
     private void updatePose() {
+        flywheelLigament.setAngle(Math.toDegrees(simulatedPositionRads));
         switch (axisOfRotation) {
             case X_AXIS:
                 this.pose3d =
@@ -152,5 +162,9 @@ public class SimpleFlywheel {
             DCMotor motor, MomentOfInertia moi, GearRatio gearRatio) {
         return Models.flywheelFromPhysicalConstants(
                 motor, moi.in(KilogramSquareMeters), gearRatio.getReduction());
+    }
+
+    public LoggedMechanism2d getMechanism2d() {
+        return mech2d;
     }
 }

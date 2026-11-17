@@ -11,7 +11,6 @@ import java.util.function.BooleanSupplier;
 import lombok.Setter;
 import org.littletonrobotics.junction.Logger;
 import org.team7525.subsystem.ManagedSubsystem;
-import org.team7525.subsystem.genericRoller.RollerSystemIO.RollerSystemIOMode;
 import org.team7525.subsystem.genericRoller.RollerSystemIO.RollerSystemIOOutputs;
 import org.wpilib.driverstation.RobotState;
 import org.wpilib.math.filter.Debouncer;
@@ -75,17 +74,17 @@ public class RollerSystem extends ManagedSubsystem<RollerSystemStates> {
                         Alert.Level.HIGH);
     }
 
-    public void periodicAfterScheduler() {
+    public void afterPeriodic() {
         io.applyOutputs(outputs);
     }
 
     public void runOpenLoop(double volts) {
-        outputs.mode = RollerSystemIOMode.VOLTAGE_CONTROL;
+        outputs.state = RollerSystemStates.VOLTAGE_CONTROL;
         outputs.appliedVoltage = volts;
     }
 
     public void runClosedLoop(double setpointVelocity) {
-        outputs.mode = RollerSystemIOMode.CLOSED_LOOP;
+        outputs.state = RollerSystemStates.CLOSED_LOOP;
         outputs.velocity = setpointVelocity;
         outputs.feedforward = Math.signum(setpointVelocity) * kS + setpointVelocity * kV;
     }
@@ -109,7 +108,7 @@ public class RollerSystem extends ManagedSubsystem<RollerSystemStates> {
     }
 
     public void stop() {
-        outputs.mode = RollerSystemIOMode.BRAKE;
+        outputs.state = RollerSystemStates.BRAKE;
     }
 
     @Override
@@ -123,10 +122,10 @@ public class RollerSystem extends ManagedSubsystem<RollerSystemStates> {
 
         // Update mode
         if (RobotState.isDisabled()) {
-            outputs.mode = RollerSystemIOMode.BRAKE;
+            outputs.state = RollerSystemStates.BRAKE;
 
             if (coastOverride.getAsBoolean()) {
-                outputs.mode = RollerSystemIOMode.COAST;
+                outputs.state = RollerSystemStates.COAST;
             }
         }
     }

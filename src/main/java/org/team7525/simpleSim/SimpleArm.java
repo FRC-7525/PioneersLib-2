@@ -8,6 +8,8 @@ import static org.wpilib.units.Units.Volts;
 
 import com.ctre.phoenix6.sim.TalonFXSimState;
 import com.revrobotics.sim.SparkMaxSim;
+import org.littletonrobotics.junction.mechanism.LoggedMechanism2d;
+import org.littletonrobotics.junction.mechanism.LoggedMechanismLigament2d;
 import org.team7525.util.GearRatio;
 import org.wpilib.math.geometry.Pose3d;
 import org.wpilib.math.geometry.Rotation3d;
@@ -29,6 +31,9 @@ public class SimpleArm {
     private final GearRatio gearRatio;
     private final Axis axisOfRotation;
     private Pose3d pose3d;
+
+    private final LoggedMechanism2d mech2d;
+    private final LoggedMechanismLigament2d armLigament;
 
     /**
      * Constructs a new SimpleArm physics simulation.
@@ -70,6 +75,11 @@ public class SimpleArm {
                         0.00153 // Measurement noise: ~1 tick of a 4096 CPR encoder
                         );
 
+        double canvasSize = Math.max(1.0, armLength.in(Meters) * 2.2);
+        mech2d = new LoggedMechanism2d(canvasSize, canvasSize);
+        var root = mech2d.getRoot("ArmRoot", canvasSize / 2.0, canvasSize / 2.0);
+        armLigament = root.append(new LoggedMechanismLigament2d("Arm", armLength.in(Meters), 0.0));
+
         updatePose();
     }
 
@@ -91,6 +101,7 @@ public class SimpleArm {
      */
     private void updatePose() {
         double angleRads = armSim.getAngle();
+        armLigament.setAngle(Math.toDegrees(angleRads));
         switch (axisOfRotation) {
             case X_AXIS:
                 this.pose3d = new Pose3d(0, 0, 0, Rotation3d.fromRadians(angleRads, 0, 0));
@@ -130,6 +141,10 @@ public class SimpleArm {
 
     public Pose3d getPose() {
         return pose3d;
+    }
+
+    public LoggedMechanism2d getMechanism2d() {
+        return mech2d;
     }
 
     // --- Unit Math Helpers ---

@@ -2,25 +2,30 @@ package org.team7525.simpleSim;
 
 import static org.wpilib.units.Units.Kilograms;
 import static org.wpilib.units.Units.Meters;
+import static org.wpilib.units.Units.MetersPerSecond;
 import static org.wpilib.units.Units.Volts;
 
 import com.ctre.phoenix6.sim.TalonFXSimState;
 import com.revrobotics.sim.SparkMaxSim;
+import java.util.ArrayList;
+import org.littletonrobotics.junction.mechanism.LoggedMechanism2d;
+import org.littletonrobotics.junction.mechanism.LoggedMechanismLigament2d;
 import org.team7525.util.GearRatio;
 import org.wpilib.math.geometry.Pose3d;
-import org.wpilib.math.geometry.Rotation3d;
 import org.wpilib.math.system.DCMotor;
 import org.wpilib.simulation.ElevatorSim;
 import org.wpilib.units.measure.Distance;
+import org.wpilib.units.measure.LinearVelocity;
 import org.wpilib.units.measure.Mass;
 import org.wpilib.units.measure.Voltage;
+import org.wpilib.util.Color8Bit;
 
 /**
  * A simplified wrapper for simulating a multi-stage linear FRC elevator. Models the overall physics
  * load natively while extrapolating the kinematic positions of individual stages for 3D
  * visualization based on rigging type.
  */
-public class SimpleElevator {
+public class SimpleElevatorSim {
     public enum RiggingType {
         /**
          * All stages move simultaneously. If the carriage moves 2 inches, intermediate stages move
@@ -37,16 +42,21 @@ public class SimpleElevator {
     private final ElevatorSim elevatorSim;
     private final GearRatio gearRatio;
     private final Distance drumRadius;
-    private final Axis axisOfMovement;
+
+    @SuppressWarnings("unused")
+    private final Axis axisOfMovement; // Retained in case of future 3D transformations
 
     // Multi-stage kinematics
     private final RiggingType riggingType;
     private final int numMovingParts;
     private final double maxStageExtensionMeters;
-    private Pose3d[] stagePoses;
+
+    /* Mechanism2d visualization of the elevator */
+    private final LoggedMechanism2d mech2d;
+    private final LoggedMechanismLigament2d[] stageLigaments;
 
     /**
-     * Constructs a new SimpleElevator physics simulation.
+     * Constructs a new SimpleElevatorSim physics simulation.
      *
      * @param gearbox The physical motor configuration (e.g. DCMotor.NEO(2)).
      * @param gearRatio The mechanical gear reduction from the motors to the drum.
@@ -60,7 +70,7 @@ public class SimpleElevator {
      * @param riggingType Cascading (simultaneous) or Continuous (sequential).
      * @param numMovingParts Total moving stages (e.g., 1 intermediate stage + 1 carriage = 2).
      */
-    public SimpleElevator(
+    public SimpleElevatorSim(
             DCMotor gearbox,
             GearRatio gearRatio,
             Mass totalCarriageMass,
@@ -72,23 +82,25 @@ public class SimpleElevator {
             Axis axisOfMovement,
             RiggingType riggingType,
             int numMovingParts) {
+
         if (numMovingParts <= 0) {
             throw new IllegalArgumentException("numMovingParts must be greater than zero");
         }
         if (maxHeight.in(Meters) <= minHeight.in(Meters)) {
             throw new IllegalArgumentException("maxHeight must be greater than minHeight");
         }
+
         this.gearRatio = gearRatio;
         this.drumRadius = drumRadius;
         this.axisOfMovement = axisOfMovement;
         this.riggingType = riggingType;
         this.numMovingParts = numMovingParts;
-        this.stagePoses = new Pose3d[numMovingParts];
 
         // The max extension of a single stage is total travel divided by number of moving parts
         this.maxStageExtensionMeters =
                 (maxHeight.in(Meters) - minHeight.in(Meters)) / numMovingParts;
-        elevatorSim =
+
+        this.elevatorSim =
                 new ElevatorSim(
                         gearbox,
                         gearRatio.getReduction(),
@@ -97,9 +109,23 @@ public class SimpleElevator {
                         minHeight.in(Meters),
                         maxHeight.in(Meters),
                         simulateGravity,
-                        initialHeight.in(Meters),
-                        0.001 // Measurement noise: 1 millimeter standard deviation
-                        );
+                        initialHeight.in(Meters));
+
+        // Configure Mechanism2d
+        // Canvas is slightly taller than max height to prevent clipping
+        this.mech2d = new LoggedMechanism2d(1.0, maxHeight.in(Meters) + 0.5);
+        this.mech2d.setBackgroundColor(new Color8Bit(0, 0, 0));
+
+        var root = mech2d.getRoot("ElevatorRoot", 0.5, 0.0); // Base at bottom center
+
+        // Unify all ligaments into a single array for easier iteration
+        this.stageLigaments = new LoggedMechanismLigament2d[numMovingParts];
+        for (int i = 0; i < numMovingParts; i++) {
+            // Uniquely name nodes to prevent WPILib duplicates ("Stage 1", "Stage 2", ...,
+            // "Carriage")
+            String stageName = (i == numMovingParts - 1) ? "Carriage" : "Stage " + (i + 1);
+            stageLigaments[i] = root.append(new LoggedMechanismLigament2d(stageName, 0, 90));
+        }
 
         updatePoses();
     }
@@ -108,6 +134,10 @@ public class SimpleElevator {
         elevatorSim.setInputVoltage(volts.in(Volts));
         elevatorSim.update(dt);
         updatePoses();
+    }
+
+    public LoggedMechanism2d getMechanism2d() {
+        return mech2d;
     }
 
     /**
@@ -120,31 +150,22 @@ public class SimpleElevator {
         for (int i = 0; i < numMovingParts; i++) {
             double stageAbsoluteHeight = 0;
 
-            if (riggingType == RiggingType.CASCADING) {
-                // Stages move proportionally based on their position in the stack
-                stageAbsoluteHeight = totalHeight * ((i + 1.0) / numMovingParts);
-            } else if (riggingType == RiggingType.CONTINUOUS) {
-                // The final carriage (highest index) maxes out first, pulling the lower stages up
-                // sequentially
-                int stagesAbove = (numMovingParts - 1) - i;
-                double deadzone = maxStageExtensionMeters * stagesAbove;
-                stageAbsoluteHeight = Math.max(0, totalHeight - deadzone);
+            switch (riggingType) {
+                case CASCADING -> {
+                    // Stages move proportionally based on their position in the stack
+                    stageAbsoluteHeight = totalHeight * ((i + 1.0) / numMovingParts);
+                }
+                case CONTINUOUS -> {
+                    // The final carriage (highest index) maxes out first, pulling the lower stages
+                    // up sequentially
+                    int stagesAbove = (numMovingParts - 1) - i;
+                    double deadzone = maxStageExtensionMeters * stagesAbove;
+                    stageAbsoluteHeight = Math.max(0, totalHeight - deadzone);
+                }
             }
 
-            stagePoses[i] = generatePoseForAxis(stageAbsoluteHeight);
-        }
-    }
-
-    private Pose3d generatePoseForAxis(double heightMeters) {
-        switch (axisOfMovement) {
-            case X_AXIS:
-                return new Pose3d(heightMeters, 0, 0, new Rotation3d());
-            case Y_AXIS:
-                return new Pose3d(0, heightMeters, 0, new Rotation3d());
-            case Z_AXIS:
-                return new Pose3d(0, 0, heightMeters, new Rotation3d());
-            default:
-                return new Pose3d();
+            // IMPORTANT FIX: Apply the length AFTER calculating it
+            stageLigaments[i].setLength(stageAbsoluteHeight);
         }
     }
 
@@ -152,11 +173,11 @@ public class SimpleElevator {
      * Returns an array of Pose3d objects for 3D visualization. Pass this array directly into
      * AdvantageScope or Field3d.
      */
-    public Pose3d[] getStagePoses() {
-        return stagePoses;
+    public ArrayList<Pose3d> getStagePoses() {
+        return mech2d.generate3dMechanism();
     }
 
-    // --- Motor Sync Methods (Unchanged) ---
+    // --- Motor Sync Methods ---
 
     public void syncMotors(SparkMaxSim motor) {
         motor.getRelativeEncoderSim().setPosition(getMotorPositionRotations());
@@ -166,6 +187,14 @@ public class SimpleElevator {
     public void syncMotors(TalonFXSimState motor) {
         motor.setRawRotorPosition(getMotorPositionRotations());
         motor.setRotorVelocity(getMotorVelocityRPS());
+    }
+
+    public Distance getCurrentHeight() {
+        return Meters.of(elevatorSim.getPosition());
+    }
+
+    public LinearVelocity getCurrentVelocity() {
+        return MetersPerSecond.of(elevatorSim.getVelocity());
     }
 
     public double getCurrentDrawAmps() {

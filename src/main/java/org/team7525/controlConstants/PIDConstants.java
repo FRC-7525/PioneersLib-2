@@ -1,33 +1,16 @@
 package org.team7525.controlConstants;
 
-import org.wpilib.telemetry.TelemetryLoggable;
-import org.wpilib.telemetry.TelemetryTable;
-import org.wpilib.tunable.TunableDouble;
-import org.wpilib.tunable.Tunables;
-
 /** PID constants used to create PID controllers */
-public class PIDConstants implements TelemetryLoggable {
+public class PIDConstants {
 
-    private final boolean tunable;
-    private final double defaultKP, defaultKI, defaultKD, defaultIZone;
-    private final TunableDouble tKP, tKI, tKD, tIZone;
+    private final LoggedTunableNumber kP, kI, kD, iZone;
 
     public PIDConstants(
-            String name, double kP, double kI, double kD, double iZone, boolean tunable) {
-        this.tunable = tunable;
-        this.defaultKP = kP;
-        this.defaultKI = kI;
-        this.defaultKD = kD;
-        this.defaultIZone = iZone;
-
-        if (tunable) {
-            tKP = Tunables.addDouble(name + "/kP", kP);
-            tKI = Tunables.addDouble(name + "/kI", kI);
-            tKD = Tunables.addDouble(name + "/kD", kD);
-            tIZone = Tunables.addDouble(name + "/iZone", iZone);
-        } else {
-            tKP = tKI = tKD = tIZone = null;
-        }
+            String baseString, double kP, double kI, double kD, double iZone, boolean tunable) {
+        this.kP = new LoggedTunableNumber(baseString + "/kP", tunable, kP);
+        this.kI = new LoggedTunableNumber(baseString + "/kI", tunable, kI);
+        this.kD = new LoggedTunableNumber(baseString + "/kD", tunable, kD);
+        this.iZone = new LoggedTunableNumber(baseString + "/iZone", tunable, iZone);
     }
 
     public PIDConstants(String name, double kP, double kI, double kD, boolean tunable) {
@@ -43,26 +26,26 @@ public class PIDConstants implements TelemetryLoggable {
     }
 
     public double getKP() {
-        return tunable ? tKP.get() : defaultKP;
+        return kP.get();
     }
 
     public double getKI() {
-        return tunable ? tKI.get() : defaultKI;
+        return kI.get();
     }
 
     public double getKD() {
-        return tunable ? tKD.get() : defaultKD;
+        return kD.get();
     }
 
     public double getIZone() {
-        return tunable ? tIZone.get() : defaultIZone;
+        return iZone.get();
     }
 
-    @Override
-    public void logTo(TelemetryTable table) {
-        table.log("kP", getKP());
-        table.log("kI", getKI());
-        table.log("kD", getKD());
-        table.log("iZone", getIZone());
+    public boolean hasChanged() {
+        boolean changed = kP.hasChanged(hashCode());
+        changed |= kI.hasChanged(hashCode());
+        changed |= kD.hasChanged(hashCode());
+        changed |= iZone.hasChanged(hashCode());
+        return changed;
     }
 }

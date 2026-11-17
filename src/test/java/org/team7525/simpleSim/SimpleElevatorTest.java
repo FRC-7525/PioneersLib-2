@@ -14,7 +14,7 @@ class SimpleElevatorTest {
         assertThrows(
                 IllegalArgumentException.class,
                 () ->
-                        new SimpleElevator(
+                        new SimpleElevatorSim(
                                 DCMotor.getNEO(1),
                                 new GearRatio(10),
                                 Kilograms.of(5),
@@ -24,7 +24,7 @@ class SimpleElevatorTest {
                                 Meters.of(0),
                                 true,
                                 Axis.Z_AXIS,
-                                SimpleElevator.RiggingType.CASCADING,
+                                SimpleElevatorSim.RiggingType.CASCADING,
                                 0));
     }
 }

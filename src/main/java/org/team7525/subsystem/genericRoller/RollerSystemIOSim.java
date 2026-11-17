@@ -54,15 +54,17 @@ public class RollerSystemIOSim implements RollerSystemIO {
     public void applyOutputs(RollerSystemIOOutputs outputs) {
 
         if (RobotState.isDisabled()
-                || outputs.mode == RollerSystemIOMode.BRAKE
-                || outputs.mode == RollerSystemIOMode.COAST) {
+                || outputs.state == RollerSystemStates.BRAKE
+                || outputs.state == RollerSystemStates.COAST) {
+            previousError = 0.0;
             appliedVoltage = 0.0;
-        } else if (outputs.mode == RollerSystemIOMode.CLOSED_LOOP) {
+        } else if (outputs.state == RollerSystemStates.CLOSED_LOOP) {
             double error = outputs.velocity - measuredVelocity;
             double derivative = (error - previousError) / dt;
             appliedVoltage = outputs.kP * error + outputs.kD * derivative + outputs.feedforward;
             previousError = error;
         } else {
+            previousError = 0.0;
             appliedVoltage = outputs.appliedVoltage;
         }
         appliedVoltage = Math.clamp(appliedVoltage, -12.0, 12.0);

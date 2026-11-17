@@ -115,7 +115,7 @@ public class StatusSignalRefresher {
             toRefresh = calculatedStatusSignalsArrays.get("0");
         } else {
             var statusSignalArrayKey =
-                    calculatedStatusSignalsPerCycle.get(_cycleCount % (calculatedCount - 1));
+                    calculatedStatusSignalsPerCycle.get(_cycleCount % calculatedCount);
             toRefresh = calculatedStatusSignalsArrays.get(statusSignalArrayKey);
         }
         StatusSignal.refreshAll(toRefresh);
